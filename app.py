@@ -5,6 +5,83 @@ import base64
 import requests
 import os
 
+# Debug + auto-detect auth for OpenAI / Replicate
+import streamlit as st
+import os
+import requests
+
+st.title("Auth debug — see masked tokens & test results")
+
+def mask(s):
+    if not s: return None
+    s = s.strip()
+    return f"{s[:4]}...{s[-4:]} (len={len(s)})"
+
+# 1) read from possible locations
+rep_token = st.secrets.get("api_keys", {}).get("REPLICATE_API_TOKEN") or st.secrets.get("REPLICATE_API_TOKEN") or os.environ.get("REPLICATE_API_TOKEN")
+open_token = st.secrets.get("api_keys", {}).get("OPENAI_API_KEY") or st.secrets.get("OPENAI_API_KEY") or os.environ.get("OPENAI_API_KEY")
+
+# 2) sanitize (strip BOM/newlines)
+def clean(t):
+    if not t: return None
+    return t.strip().replace("\ufeff", "")  # remove BOM if present
+
+rep_token = clean(rep_token)
+open_token = clean(open_token)
+
+st.write("Replicate token present?", bool(rep_token))
+st.write("Replicate token masked:", mask(rep_token))
+st.write("OpenAI token present?", bool(open_token))
+st.write("OpenAI token masked:", mask(open_token))
+
+# 3) choose which provider to test
+# If both present, we'll test both.
+def test_openai(token):
+    if not token: return None
+    headers = {"Authorization": f"Bearer {token}"}
+    try:
+        r = requests.get("https://api.openai.com/v1/models", headers=headers, timeout=10)
+        return (r.status_code, r.text[:400])
+    except Exception as e:
+        return ("error", str(e))
+
+def test_replicate(token):
+    if not token: return None
+    headers = {"Authorization": f"Token {token}"}
+    try:
+        r = requests.get("https://api.replicate.com/v1/models", headers=headers, timeout=10)
+        return (r.status_code, r.text[:400])
+    except Exception as e:
+        return ("error", str(e))
+
+# Run tests (only very short responses shown)
+open_result = test_openai(open_token)
+rep_result = test_replicate(rep_token)
+
+st.write("OpenAI test result (status, partial body):", open_result)
+st.write("Replicate test result (status, partial body):", rep_result)
+
+# 4) Helpful hints
+if rep_token and (not rep_result or rep_result[0] in (401, "error")):
+    st.warning("Replicate token present but test returned 401 or error. Check that:\n"
+               "- You pasted the full token from Replicate dashboard (starts with r8_)\n"
+               "- There are no extra quotes or spaces around it in Streamlit Secrets\n"
+               "- You clicked Save in Streamlit Cloud -> Secrets and then clicked Rerun\n"
+               "- If still failing, regenerate a new token on Replicate and paste that.")
+if open_token and (not open_result or open_result[0] in (401, "error")):
+    st.warning("OpenAI token present but test returned 401 or error. Check that:\n"
+               "- You pasted the full OpenAI key (starts with sk-)\n"
+               "- You used 'Bearer' as the header prefix\n"
+               "- No extra quotes/spaces, and you saved secrets in Streamlit Cloud\n"
+               "- If still failing, regenerate the key and update secrets.")
+if not rep_token and not open_token:
+    st.error("No tokens found. Re-open Streamlit Cloud -> Manage app -> Advanced -> Secrets and paste the TOML there.\n\n"
+             "Example TOML (paste this exactly):\n\n"
+             "[api_keys]\n"
+             "REPLICATE_API_TOKEN = \"r8_your_full_token_here\"\n"
+             "OPENAI_API_KEY    = \"sk-your_full_key_here\"\n\n"
+             "Then Save and Rerun the app.")
+
 st.set_page_config(page_title="PhotoStyler", layout="centered")
 
 st.title("PhotoStyler — upload a selfie, pick a style, get a portrait/cartoonic result")

@@ -79,7 +79,7 @@ if not rep_token and not open_token:
              "Example TOML (paste this exactly):\n\n"
              "[api_keys]\n"
              "REPLICATE_API_TOKEN = \"r8_your_full_token_here\"\n"
-             "OPENAI_API_KEY    = \"sk-your_full_key_here\"\n\n"
+             "OPENAI_API_KEY    = \"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"\n\n"
              "Then Save and Rerun the app.")
 
 st.set_page_config(page_title="PhotoStyler", layout="centered")

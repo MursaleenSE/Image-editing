@@ -26,7 +26,7 @@ if st.button("Transform"):
     with st.spinner("Calling model..."):
         # Example using Replicate's stable-diffusion-img2img model via their REST API.
         # You need to set REPLICATE_API_TOKEN in Streamlit secrets as st.secrets["api_keys"]["REPLICATE_API_TOKEN"]
-        token = st.secrets["api_keys"]["REPLICATE_API_TOKEN"]
+        token = st.secrets["api_keys"]["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"]
 
         # Convert image to bytes and base64 if needed
         buf = io.BytesIO()
